@@ -1,0 +1,29 @@
+{
+  "name": "rgwebhook",
+  "version": "0.1.0",
+  "description": "An easy to use webhook link generate supporting multiple provider for hosting",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OfficialCodinary/rgwebhook.git"
+  },
+  "keywords": [
+    "webhooklink",
+    "link",
+    "webhhook",
+    "ngrok",
+    "localtunnel",
+    "rg",
+    "robbing",
+    "gamer"
+  ],
+  "author": "ROBBING GAMER",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/OfficialCodinary/rgwebhook/issues"
+  },
+  "homepage": "https://github.com/OfficialCodinary/rgwebhook#readme"
+}
