@@ -21,9 +21,9 @@ app.use(express.json());
  * @returns {Promise<boolean>} A Promise that resolves when the server is started.
  */
 
-async function startServer(options = { provider: 'ngrok' , launchOptions: {}, port: 3000}) {
+async function startServer(options = { provider: 'ngrok', launchOptions: {}, port: 3000 }) {
   return new Promise((resolve, reject) => {
-    const server = app.listen(port, async () => {
+    const server = app.listen(options.port, async () => {
       let chosenProvider;
 
       if (options.provider === 'tunnelmole') {
@@ -35,9 +35,10 @@ async function startServer(options = { provider: 'ngrok' , launchOptions: {}, po
       }
 
       try {
+        if (!options.launchOptions) options.launchOptions = {};
         webHostedUrl = await chosenProvider({
-          port: port,
-          ...launchOptions
+          port: options.port,
+          ...options.launchOptions
         });
         console.log('Server started with', chosenProvider.name || chosenProvider.toString());
         serverStarted = !serverStarted
@@ -67,8 +68,11 @@ app.all('/', (req, res) => {
   }
 
   delete req.query.webhookId;
+  var webhookData = req.query.webhookData || null;
+  delete req.query.webhookData
+  if (webhookData) webhookData = JSON.parse(decodeURI(webhookData))
+
   const data = (req.method === 'GET' || req.method === 'DELETE') ? req.query : req.body;
-  const webhookData = req.query.webhookData || null;
   webhooks[webhookId].emit(req.method, {
     webhookData,
     data,
@@ -89,14 +93,15 @@ function createWebhook(webhookId, data) {
   if (!serverStarted) {
     throw new Error('Webhook server not started');
   }
-
-  if (webhooks[webhookId]) {
-    throw new Error(`Webhook with ID "${webhookId}" already exists.`);
+  var webhookInstance;
+  if (!webhooks[webhookId]) {
+    webhookInstance = new EventEmitter();
+    webhooks[webhookId] = webhookInstance;
+  } else {
+    webhookInstance = webhooks[webhookId]
   }
 
-  const webhookInstance = new EventEmitter();
-  webhooks[webhookId] = webhookInstance;
-  const webhookUrl = `${webHostedUrl}/?webhookId=${webhookId}${data ? `&webhookData=${JSON.stringify(data)}` : ''}`;
+  const webhookUrl = `${webHostedUrl}/?webhookId=${webhookId}${data ? `&webhookData=${encodeURI(JSON.stringify(data))}` : ''}`;
 
   return { webhookInstance, webhookUrl };
 }
