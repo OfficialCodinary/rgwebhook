@@ -54,7 +54,7 @@ Starts the Express server and exposes it using the specified tunneling service.
 - `options`: Configuration options for starting the server.
   - `provider`: String, the tunneling service provider (`ngrok` or `tunnelmole`).
   - `port`: Number, the port on which the server will run.
-  - `launchOption`: Object, Custom parameters to be passed to respective provider on start.
+  - `launchOptions`: Object, Custom parameters to be passed to respective provider on start.
 
 Returns a Promise that resolves when the server is successfully started.
 
