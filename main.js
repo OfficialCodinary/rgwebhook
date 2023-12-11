@@ -1,69 +1,82 @@
-const express = require('express');
-const ngrok = require("ngrok");
+const fastify = require('fastify');
+const ngrok = require("@ngrok/ngrok");
 const tunnelmole = require('tunnelmole/cjs');
-const EventEmitter = require('events');
+const localtunnel = require('localtunnel')
+const EventEmitter = require('node:events');
 
 process.env.TUNNELMOLE_QUIET_MODE = 1;
 
-const app = express();
+const app = fastify();
 let webHostedUrl = null;
 const webhooks = {};
 let serverStarted = false
 
-app.use(express.json());
+app.register(require('@fastify/sensible'));
 
 /**
  * Starts the server and exposes it using ngrok or tunnelmole.
  * @param {Object} options - Configuration options.
- * @param {string} options.provider - Provider to use ('ngrok' or 'tunnelmole').
+ * @param {String} options.provider - Provider to use ('ngrok' or 'tunnelmole').
  * @param {Object} options.launchOptions - Options specific to the provider.
- * @param {number} options.port - Port to start the server on.
+ * @param {Object} options.fastifyOptions - Options to be passed to fastify.
+ * @param {Number} options.port - Port to start the server on.
  * @returns {Promise<boolean>} A Promise that resolves when the server is started.
  */
 
-async function startServer(options = { provider: 'ngrok', launchOptions: {}, port: 3000 }) {
+async function startServer(options = {
+  provider: 'ngrok',
+  launchOptions: {},
+  port: 3000, fastifyOptions: {}
+}) {
+
   return new Promise((resolve, reject) => {
-    const server = app.listen(options.port, async () => {
-      let chosenProvider;
-
-      if (options.provider === 'tunnelmole') {
-        chosenProvider = tunnelmole;
-      } else if (options.provider === 'ngrok') {
-        chosenProvider = ngrok.connect;
-      } else {
-        reject(new Error('Invalid provider'));
-      }
-
-      try {
-        if (!options.launchOptions) options.launchOptions = {};
-        webHostedUrl = await chosenProvider({
-          port: options.port,
-          ...options.launchOptions
-        });
-        console.log('Server started with', chosenProvider.name || chosenProvider.toString());
+    try {
+      app.listen({ port: options.port, ...options.fastifyOptions }, async (err) => {
+        if (err) {
+          reject(err);
+        }
+        if (options.provider === 'tunnelmole') {
+          webHostedUrl = await tunnelmole({
+            port: options.port,
+            ...options.launchOptions
+          })
+        } else if (options.provider === 'ngrok') {
+          webHostedUrl = (await ngrok.forward({
+            port: options.port,
+            ...options.launchOptions
+          })).url()
+        } else if (options.provider === 'localtunnel') {
+          webHostedUrl = (await localtunnel({
+            port: options.port,
+            ...options.launchOptions
+          })).url
+        } else {
+          reject(new Error('Invalid provider'));
+        }
+        console.log('Server started with', options.provider);
         serverStarted = !serverStarted
         resolve(true);
-      } catch (error) {
-        reject(error);
-      }
-    });
-
-    server.on('error', (err) => {
-      reject(err);
-    });
+      });
+    } catch (err) {
+      reject(err)
+    }
   });
 }
 
+app.setErrorHandler((error, request, reply) => {
+  reply.send({ error, request, reply });
+});
 
 app.all('/', (req, res) => {
+  res.type('application/json')
   if (!['GET', 'DELETE', 'POST', 'PUT'].includes(req.method)) {
-    res.status(400).json({ ok: false, message: 'Invalid request method' });
+    res.code(400).send({ ok: false, message: 'Invalid request method' });
     return;
   }
 
   const webhookId = req.query.webhookId;
   if (!webhookId || !webhooks[webhookId]) {
-    res.status(404).json({ ok: false, message: 'Webhook not found' });
+    res.code(404).send({ ok: false, message: 'Webhook not found' });
     return;
   }
 
@@ -75,10 +88,10 @@ app.all('/', (req, res) => {
   const data = (req.method === 'GET' || req.method === 'DELETE') ? req.query : req.body;
   webhooks[webhookId].emit(req.method, {
     webhookData,
-    data,
+    data: data || null,
   });
 
-  res.json({ ok: true, message: 'Data has been received and handled.' });
+  res.code(200).send({ ok: true, message: 'Data has been received and handled.' });
 });
 
 /**
@@ -90,7 +103,7 @@ app.all('/', (req, res) => {
  */
 
 function createWebhook(webhookId, data) {
-  if (!serverStarted) {
+  if (!serverStarted || !webHostedUrl) {
     throw new Error('Webhook server not started');
   }
   var webhookInstance;

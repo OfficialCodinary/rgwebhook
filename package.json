@@ -1,10 +1,12 @@
 {
   "name": "rgwebhook",
-  "version": "0.2.7",
+  "version": "0.3.1",
   "description": "An easy to use webhook link generate supporting multiple provider for hosting",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "ping:ngrok": "ngrok http 3000 && echo 'Ngrok server pinged successfully' || echo 'Error: Failed to ping Ngrok server'",
+    "ping:tunnelmole": "tunnelmole --port 3000 && echo 'Tunnelmole server pinged successfully' || echo 'Error: Failed to ping Tunnelmole server'",
+    "ping:localtunnel": "lt --port 3000 && echo 'Localtunnel server pinged successfully' || echo 'Error: Failed to ping Localtunnel server'"
   },
   "repository": {
     "type": "git",
@@ -15,6 +17,8 @@
     "link",
     "webhhook",
     "ngrok",
+    "tunnelmole",
+    "@ngrok/ngrok",
     "localtunnel",
     "rg",
     "robbing",
@@ -27,9 +31,10 @@
   },
   "homepage": "https://github.com/OfficialCodinary/rgwebhook#readme",
   "dependencies": {
-    "events": "^3.3.0",
-    "express": "^4.18.2",
-    "ngrok": "^5.0.0-beta.2",
+    "@fastify/sensible": "^5.5.0",
+    "@ngrok/ngrok": "^0.9.1",
+    "fastify": "^4.24.3",
+    "localtunnel": "^2.0.2",
     "tunnelmole": "^2.2.8"
   }
 }
