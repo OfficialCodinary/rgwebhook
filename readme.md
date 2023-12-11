@@ -1,7 +1,3 @@
-Certainly, here's the revised documentation including parameters for the functions:
-
----
-
 # RgWebhook
 
 ## Overview
